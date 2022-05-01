@@ -9,4 +9,4 @@ layout: home
 
 其中大多数内容都是问答题的形式，答案是我结合网上找到的可信度较高的文章和我自己的经验，然后通过我自己验证的。
 
-如果有不准确的地方欢迎到 Github 提 issue 或者 PR，有想要添加的内容也可以提。
+如果有不准确的地方欢迎到 [Github](https://github.com/jacob-sheldon/ios-interview-qa) 提 issue 或者 PR，有想要添加的内容也可以提。
