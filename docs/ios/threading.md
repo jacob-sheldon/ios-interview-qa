@@ -1,6 +1,6 @@
 ---
 layout: default
-title: 多线层
+title: 多线程
 parent: iOS 相关
 ---
 
