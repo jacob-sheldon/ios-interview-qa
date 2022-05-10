@@ -20,10 +20,10 @@
 
 title: iOS 面试八股文
 email: shizhiang@126.com
-description: >- # this means to ignore newlines until "baseurl:"
+description: 
   收集到的 iOS 面试八股文，包括 iOS、计算机网络、Objective-C、操作系统等相关主题
 baseurl: "" # the subpath of your site, e.g. /blog
-url: "" # the base hostname & protocol for your site, e.g. http://example.com
+url: "http://baguwen.iosprogrammer.tech" # the base hostname & protocol for your site, e.g. http://example.com
 github_username: jacob-sheldon 
 
 # Build settings
@@ -32,6 +32,7 @@ github_username: jacob-sheldon
 theme: "just-the-docs"
 plugins:
   - jekyll-feed
+  - jekyll-sitemap
 
 # Exclude from processing.
 # The following items will not be processed, by default.
