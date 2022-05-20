@@ -71,7 +71,6 @@ iOS 系统的垂直同步是保持开启的，所以垂直同步机制是造成�
 - 文本渲染：屏幕上看到的所有文本内容控件，包括 UIWebView，在底层都是通过 CoreText 排版绘制为 Bitmap 显示的。常见的文本控件（UILabel、UITextView 等）其排版和绘制都是在主线程进行的，当显示大量文本时，CPU 的压力会非常大。解决方法： **自定义文本控件，使用 TextKit 或者 CoreText 对文本异步绘制。**
 - 图片的解码：使用 UIImage 或 CGImageSource 创建图片时不会立即解码，设置到 UIImageView 或者 CALayer.contents 中且 CALayer 被提交到 GPU 前，CGImage 中的数据才会得到解码。这一步是发生在主线程的，并且不可避免。解决方法：后台线程先把图片绘制到 CGBitmapContext 中，然后从 Bitmap 直接创建图片（SDWebImage 就是这样做的）。
 
-
 ### GPU 消耗资源的原因和解决方案
 
 - GPU 干的事情：接受 CPU 提交的纹理（Texture）和顶点描述（三角形），应用变换（transform）、混合并渲染，然后输出到缓冲。
@@ -99,3 +98,25 @@ iOS 系统的垂直同步是保持开启的，所以垂直同步机制是造成�
 
     1. CPU 创建 view 对象并计算位置和文本宽高，之后进行文本的渲染和图片的解码（如果是图片的话）
     2. GPU 接受 CPU 提交过来的纹理和顶点描述，应用变换、混合和渲染，然后输出到缓冲区
+
+事件传递链
+
+RunloopSource0 -> UIKitCore 的事件队列 -> UIWindow -> UIView ... -> 最底下的能够响应的 view
+
+从UIWindow递归寻找子视图，并且对于同一层级的子视图使用倒叙遍历，分别调用每一个 view 的hittest方法。
+
+## 一个 view 在下列情况不能响应事件：
+
+- alpha < 0.01
+- userInteractionEnable = NO
+- hidden = YES
+
+## 事件响应链
+
+1. RunloopSource0
+2. UIKit 事件队列
+3. Application sendEvent
+4. 触发事件的 UIControl `sendAction:to:forEvent:`
+5. Application `sendAction:from:to:forEvent:`, 这里有参数target如果不为空则直接给target发送action，否则沿着响应链查询能够影响action的UIResponder。查询每个视图的方法是通过调用 `canPerformAction:withSender` 方法，如果当前 view 实现了 action 那么就返回 YES，否则继续沿着 nextResponder 找能成功响应的 responder。
+
+![](../../images/responder-chain.png)

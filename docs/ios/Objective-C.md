@@ -21,8 +21,8 @@ OC 是编译型、动态、弱类型语言。OC要先编译成二进制文件才
 
 ## OC 对象占用内存大小
 
-  - isa 指针大小 + 实例变量大小
-  - 最小是 16 字节
+- isa 指针大小 + 实例变量大小
+- 最小是 16 字节
 
 ## OC 编译过程
 
@@ -39,9 +39,9 @@ OC 是编译型、动态、弱类型语言。OC要先编译成二进制文件才
 
 - 符号解析。将符号的引用和符号的定义建立关联。
 - 重定位。
- - 将多个代码段和数据段分别合并为一个单独的代码段和数据段；
- - 计算每个定义的符号在虚拟地址空间中的绝对地址；
- - 将可执行文件中的符号引用处的地址修改为重定位后的地址信息。
+  - 将多个代码段和数据段分别合并为一个单独的代码段和数据段；
+  - 计算每个定义的符号在虚拟地址空间中的绝对地址；
+  - 将可执行文件中的符号引用处的地址修改为重定位后的地址信息。
 
 ## copy vs strong
 
@@ -50,7 +50,7 @@ strong 只是增加了引用计数
 copy 会把对象进行复制，从而产生一个新对象，但是得到的是不可变对象
 
 当修饰可变对象时用`strong`，当修饰不可变对象时用`copy`。
-  
+
 - 把一个可变对象赋值给 copy 修饰的可变对象只能得到不可变对象
 - 把一个可变对象赋值给 strong 修饰的可变对象可以得到可变对象，这时候对任意一个对象修改都会影响另外一个，所以可能需要使用 mutableCopy 之后再赋值
 - 把一个可变对象赋值给不可变对象总是得到不可变对象，但是如果使用 strong 修饰，这个被赋值的不可变对象会随着改变，所以不可变对象要用 copy 修饰。
@@ -60,35 +60,6 @@ copy 会把对象进行复制，从而产生一个新对象，但是得到的是
 
 - assign 直接简单赋值，不会增加对象的引用计数，用于修饰非Objective-C类型，主要指基本数据类型和C数据类型，或修饰对指针的弱引用。
 - weak 修饰弱引用，不增加对象的引用计数，主要用于避免循环引用，和strong/retain对应，功能上和assign一样简单，但不同的是weak修饰的对象消失后会自动将指针置nil，防止出现“悬挂指针”。
-
-## 事件传递链
-
-RunloopSource0 -> UIKitCore 的事件队列 -> UIWindow -> UIView ... -> 最底下的能够响应的 view
-
-从UIWindow递归寻找子视图，并且对于同一层级的子视图使用倒叙遍历，分别调用每一个 view 的hittest方法。
-
-## 一个 view 在下列情况不能响应事件：
-- alpha < 0.01
-- userInteractionEnable = NO
-- hidden = YES
-
-## 事件响应链
-
-1. RunloopSource0 
-2. UIKit 事件队列 
-3. Application sendEvent 
-4. 触发事件的 UIControl `sendAction:to:forEvent:`
-5. Application `sendAction:from:to:forEvent:`, 这里有参数target如果不为空则直接给target发送action，否则沿着响应链查询能够影响action的UIResponder。查询每个视图的方法是通过调用 `canPerformAction:withSender` 方法，如果当前 view 实现了 action 那么就返回 YES，否则继续沿着 nextResponder 找能成功响应的 responder。
-
-![](../../images/responder-chain.png)
-
-## 什么是 runtime, runtime 用来做什么的？
-
-runtime 是一套底层的 C 语言 API，所有 OC 的元素都是通过这套 API 来执行的。比如说 类的定义、方法的调用等。
-
-## Objective-C 方法的调用过程
-
-实例变量利用 isa 指针找到类对象，从类对象中存放着方法列表，其中每一个方法都包含了 SEL 和 IMP 的映射，可以根据方法名确定 SEL，之后可以确定 IMP，而 IMP 指向了最终的函数实现。
 
 ## OC 支持函数重载吗？
 
@@ -108,7 +79,7 @@ hash 方法只在对象被添加至NSSet和设置为NSDictionary的key时会调�
 
 为了优化判等的效率, 基于hash的NSSet和NSDictionary在判断成员是否相等时, 会这样做
 
-Step 1: 集成成员的hash值是否和目标hash值相等, 如果相同进入Step 2, 如果不等, 直接判断不相等
+Step 1: 集合成员的 hash 值是否和目标hash值相等, 如果相同进入Step 2, 如果不等, 直接判断不相等
 
 Step 2: hash值相同(即Step 1)的情况下, 再进行对象判等, 作为判等的结果
 
@@ -136,6 +107,7 @@ common mode 是一种特殊的 mode，注册到这个 mode 的事件会自动分
 利用运行时在初始化之后修改对象 isa 指针，指向一个动态创建的子类对象（确保子类在整个运行时环境内是唯一，参考 KVO 底层实现），hook 时使用 isKindOf 判断。
 
 ## 类别（Category）和扩展（Extension）的区别
+
     - 类别在运行期决议，扩展在编译期决议。
     - 只能为已存在的类添加新的功能方法，而不能添加新的属性。类别扩展的新方法优先级更高，会覆盖类中同名的方法。
     - 在同一个编译单元里我们的category名不能重复，否则会出现编译错误。
@@ -151,7 +123,7 @@ common mode 是一种特殊的 mode，注册到这个 mode 的事件会自动分
 
 1. 加载可执行文件（App 的 .o 文件集合）
 2. 加载动态链接库，进行 rebase 指针调整和 bind 符号绑定
-dyld 的时间线：Load dylibs → Rebase → Bind → ObjC → Initilizers
+   dyld 的时间线：Load dylibs → Rebase → Bind → ObjC → Initilizers
 3. Objc 运行时的初始处理，包括 Objc 相关类的注册、category 注册、selector 唯一性检查等
 4. 初始化，包括了执行 +load() 方法、attribute((constructor)) 修饰的函数的调用、创建 C++ 静态全局变量
 
@@ -174,3 +146,77 @@ dyld 的时间线：Load dylibs → Rebase → Bind → ObjC → Initilizers
 ## KVO 实现原理
 
 KVO 的实现使用了 isa-swizzling 的技术。对象的 isa 指针指向的是类。当一个观察者注册了某对象的属性，这个被观察者的 isa 指针就会指向一个中间类而不是真正的类，该中间类实现了被观察类的set方法，set方法实现内部会顺序调用willChangeValueForKey方法、原来的setter方法实现、didChangeValueForKey方法，而didChangeValueForKey方法内部又会调用监听器的observeValueForKeyPath:ofObject:change:context:监听方法。
+
+## `load` vs `initialize`
+
+### 调用方式
+
+load 是根据函数地址直接调用的，类似 C 语言的函数调用方式；
+
+initialize 是通过 OC 的消息机制（objc_msgSend) 进行调用的
+
+### 调用时机
+
+load 是在 runtime 加载类/分类时调用（只会调用一次）
+
+initialize 是在类第一次接收消息的时候调用，每个类只会 initialize 一次（但是由于消息机制，父类的 initialize 可能会被调用多次）
+
+### 调用顺序
+
+load 是先父类再子类，先原类再分类，分类之间的顺序根据编译顺序确定
+
+initialize 的顺序是先父类再子类，分类会覆盖原类（由于消息机制，和其他普通方法相同）
+
+## Block
+
+### Block 的本质
+
+- Block 本质上是一个 OC 对象，含有 isa 指针
+
+- Block 是封装了函数调用以及函数调用环境的 OC 对象
+
+### block 捕获变量
+
+| 变量类型       | 是否捕获 | 访问方式 |
+| ---------- | ---- | ---- |
+| auto局部变量   | 是    | 值传递  |
+| static局部变量 | 是    | 引用传递 |
+| 全局变量       | 否    | 直接访问 |
+
+### block 类型
+
+| block 类型      | 环境               |
+| ------------- | ---------------- |
+| NSGlobalBlock | 没有捕获auto变量       |
+| NSStackBlock  | 捕获了auto变量        |
+| NSMallocBlock | StackBlock调用copy |
+
+- 在 ARC 下会根据情况把 StackBlock 尽量优化成 MallocBlock，也就是进行 copy 
+  
+  - block 作为函数返回值
+  
+  - 被强指针引用时
+  
+  - block 作为 Cocoa API 中方法名含有 usingBlock 的方法参数时
+  
+  - block 作为 GCD 方法的参数时
+
+### block 中修改外部变量的值
+
+- 不能修改局部 auto 变量的值，是因为局部 auto 变量是通过值传递被 block 捕获的，block 中存放的是另外一份值，而不是原来的局部 auto 变量
+
+- 可以修改局部 static 变量或者全局变量的值，是因为布局 static 变量是通过引用传递的，在修改的时候本质是通过指针进行的修改，而全局变量没有传递到 block 中而是直接访问的所以也能改。
+
+- 使用 `__block` 修饰的 auto 局部变量也可以在block中修改是因为被修饰后的 auto 变量会被转换为一个对象传递到 block 中，修改时是通过这个对象访问到的 auto 变量值
+
+### block 内存管理
+
+- 基本数据类型的 auto 变量会通过值传递在 block 结构体中增加一个变量，这个变量跟随 block 结构产生、销毁
+
+- 对象类型的 auto 变量或者被 __block 修饰的 auto 变量不会被栈上的 block 强引用
+
+- 对象类型的 auto 变量如果是 __strong 的则会被堆上的 block 强引用而增加引用计数，当 block 销毁时会释放掉这个强引用；如果是 __weak 的则不会被堆上的 block 强引用
+
+- 被 __block 修饰的 auto 变量会被堆上的 block 强引用，当 block 销毁时会释放掉这个强引用
+
+- ARC 下使用 strong 和 copy 修饰 block 是没有区别的，都会把 block 拷贝到堆上
