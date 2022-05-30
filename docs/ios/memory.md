@@ -2,6 +2,7 @@
 layout: default
 title: 内存管理
 parent: iOS 相关
+nav_order: 4
 ---
 
 # 内存管理
@@ -42,6 +43,8 @@ iOS 设备没有内存交换机制，当内存占用过大时会进行释放，�
 
 ARC 会自动计算对象的引用计数并在合适的时机给对象发送 copy/release/retain/autorelease 消息。
 
+ARC 会对引用计数相关方法进行优化来尽量减少方法的调用。
+
 ## assign 可以用于 OC 对象吗？为什么？
 
 不可以，如果用 assign 修饰了 OC 对象，那么这个对象在创建完成后会被立即释放，因为没有一个强引用那么它的引用计数就是 0。
@@ -51,8 +54,6 @@ assign 修饰的变量 setter 方法不会进行释放旧值和引用新值的�
 ## Autorelease 对象什么时候释放？
 
 在没有手动加 Autorelease Pool 的情况下，Autorelease 对象是在当前 runloop 迭代结束时释放的，而它能够释放的原因是系统在每个 runloop 迭代中都加入自动释放池 push 和 pop。
-
-# 
 
 `SideTable` 维护了一个 `spinlock_t` 的锁和 `weak_table_t` 主要作用是在操作 weak_table_t 的时候加锁。
 
@@ -71,7 +72,7 @@ assign 修饰的变量 setter 方法不会进行释放旧值和引用新值的�
     2. 使用 iOS10 之后可用的不带 target 参数的启动计时器方法
     3. 给 NSTimer 添加分类，分类中用带有 block 的方法将 target 设置成 NSTimer 本身
 2. 代理 delegate 用 strong 修饰（应该用 weak）
-3. block 里面要用 __weak
+3. block 捕获外部指针时需要使用 `__weak`
 
 ## 值类型和引用类型
 

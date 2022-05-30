@@ -2,6 +2,7 @@
 layout: default
 title: Runtime
 parent: iOS 相关
+nav_order: 3
 ---
 
 # Runtime
@@ -48,5 +49,4 @@ NSLog(@"[super superclass] = %@", [super superclass]); // UIViewController
 ```
 
 <u>因为 class 和 superclass 方法都是在 NSObject 中实现的，而实现的方法都是通过方法接收者的 isa 或者 superclass 指针来获取返回值，同时 super 调用方法的接受者也是 self，所以才会出现上面的结果。</u>
-
 

@@ -26,12 +26,28 @@ OC 是编译型、动态、弱类型语言。OC要先编译成二进制文件才
 
 ## OC 编译过程
 
-1. preprocess：预处理，替换 import 和 宏
-2. Tokenization: 符号化，标记源码中的每个字符串
-3. Parsing：解析成抽象语法树
-4. Static Analysis: 静态分析，检查语法错误，比如类型错误以及报警告
-5. Code Generation: 生成 LLVM 代码
-6. Optimizations: 根据传递参数进行调用优化，比如把递归转成迭代
+1. preprocess 预处理
+    - Tokenization: 符号化，标记源码中的每个字符串
+    - 宏展开
+    - `#include` `#import` 展开
+
+2. Parsing and Semantic Analysic 解析和语义分析
+    - 将预处理的符号翻译成解析树
+    - 对解析树进行语义分析
+    - 输出抽象语法树（AST：Abstract Syntax Tree）
+
+3. Code Generation and  Optimization 代码生成和优化
+    - 将抽象语法树翻译成低级中间码（LLVM IR）
+    - 优化生成的代码
+    - 生成特定目标（机器架构：arm64、x86-64）代码
+    - 输出汇编代码
+
+4. 汇编
+    - 将汇编代码翻译成目标对象文件（target object file：.o）
+
+5. 链接
+    - 将多个目标文件合并成可执行文件（或者动态库）
+
 
 ### 程序在链接过程都做了什么？
 
@@ -49,12 +65,7 @@ strong 只是增加了引用计数
 
 copy 会把对象进行复制，从而产生一个新对象，但是得到的是不可变对象
 
-当修饰可变对象时用`strong`，当修饰不可变对象时用`copy`。
-
-- 把一个可变对象赋值给 copy 修饰的可变对象只能得到不可变对象
-- 把一个可变对象赋值给 strong 修饰的可变对象可以得到可变对象，这时候对任意一个对象修改都会影响另外一个，所以可能需要使用 mutableCopy 之后再赋值
-- 把一个可变对象赋值给不可变对象总是得到不可变对象，但是如果使用 strong 修饰，这个被赋值的不可变对象会随着改变，所以不可变对象要用 copy 修饰。
-- 被不可变对象赋值一定得到不可变对象
+**`strong` 用来修饰可变对象，`copy`用来修饰不可变对象。**
 
 ## assign vs weak
 
@@ -65,11 +76,22 @@ copy 会把对象进行复制，从而产生一个新对象，但是得到的是
 
 OC 不支持函数重载，支持函数重写。
 
+函数重载：方法名相同，参数不同，OC 是根据方法名进行调用的，所以不支持函数重载。
+
+函数重写：子类重写父类函数。
+
 ## == isEqual hash
 
-== 运算符比较的是对象的地址是否相同。
-isEqual 默认也是比较两个对象的地址是否相同。
-hash 方法只在对象被添加至NSSet和设置为NSDictionary的key时会调用
+- == 运算符比较的是对象的地址是否相同。
+- isEqual 默认也是比较两个对象的地址是否相同。
+- hash 方法只在对象被添加至 `NSSet` 和设置为 `NSDictionary` 的 key 时会调用
+
+```objective-c
+NSObject *obj1 = [[NSObject alloc] init];
+NSObject *obj2 = [[NSObject alloc] init];
+NSLog(@"obj1 == obj2: %d", obj1 == obj2); // 0
+NSLog(@"obj1 isEqual: obj2: %d", [obj1 isEqual:obj2]); // 0
+```
 
 ### isEqual 的调用时机
 
@@ -77,30 +99,17 @@ hash 方法只在对象被添加至NSSet和设置为NSDictionary的key时会调�
 
 ### isEqual 和 hash 的关系
 
-为了优化判等的效率, 基于hash的NSSet和NSDictionary在判断成员是否相等时, 会这样做
+经过验证我没有发现这两者有什么必然关系，虽然在 `hash` 值相等时 `isEqual`一定会调用，但是当 `hash`不等时 `isEqual` 也不一定不调用。
 
-Step 1: 集合成员的 hash 值是否和目标hash值相等, 如果相同进入Step 2, 如果不等, 直接判断不相等
+~~为了优化判等的效率, 基于hash的NSSet和NSDictionary在判断成员是否相等时, 会这样做~~
 
-Step 2: hash值相同(即Step 1)的情况下, 再进行对象判等, 作为判等的结果
+~~Step 1: 集合成员的 hash 值是否和目标hash值相等, 如果相同进入Step 2, 如果不等, 直接判断不相等~~
+
+~~Step 2: hash值相同(即Step 1)的情况下, 再进行对象判等, 作为判等的结果~~。
 
 ## 可变数组的实现原理
 
 可变数组在初始化的时候会默认申请一定数量的内存空间，当添加进去的元素到达一定数量的时候数组会增加空间，如果连续的空间不够用，数组会复制到一个新的可用位置。
-`我没有找到比较可信的资料，这是我根据其他语言的实现方式写的。`
-
-## 简述 runloop
-
-Runloop 本质上就是一个 while 死循环，有了这个循环就可以确保线程永远不会结束，这个循环通过操作系统底层的函数来进行休眠和唤起，以此来节省消耗。
-
-Runloop 主要的工作是接收并处理各种事件，包括创建和销毁自动释放池、处理点击事件、block回调、倒计时等等。
-
-一个 Runloop 包含多个 mode，一个 mode 又包含多个 source、timer、observer。
-
-线程和 Runloop 是一一对应的，它们的关系被保存在一个全局的 Dictionary 里。线程创建时并不会带有 Runloop，只有在第一次获取时才会创建。当线程结束时销毁 Runloop，除了主线程外，只能在线程内部获取对应的 Runloop。
-
-### 为什么把 Timer 注册到 Common Mode？
-
-common mode 是一种特殊的 mode，注册到这个 mode 的事件会自动分发到 commom modes 数组（比如 default mode 和 UITrackingMode）中其他的 mode 内
 
 ## 怎么 hook 方法？怎么才能在不影响其他对象的条件下 hook 方法？
 
@@ -108,16 +117,27 @@ common mode 是一种特殊的 mode，注册到这个 mode 的事件会自动分
 
 ## 类别（Category）和扩展（Extension）的区别
 
-    - 类别在运行期决议，扩展在编译期决议。
-    - 只能为已存在的类添加新的功能方法，而不能添加新的属性。类别扩展的新方法优先级更高，会覆盖类中同名的方法。
-    - 在同一个编译单元里我们的category名不能重复，否则会出现编译错误。
-    - 类别的作用：
-        - 将类的实现分散到多个文件或者框架中
-        - 创建对私有方法的前向引用
-        - 向对象添加非正式协议
-    - 类别的局限性
-        - 只能向原类中添加新的方法，且只能添加不能修改或者删除原方法，不能向原类中添加新的属性。类别中不能添加新的属性是因为OC程序编译后一个类的内存布局就确定了，运行期如果修改内存布局会有问题。
-        - 类别添加的新方法全局有效且优先级最高，如果和原类方法重名，原来的方法会被覆盖。
+- 类别在运行期决议，扩展在编译期决议。
+
+- 只能为已存在的类添加新的功能方法，而不能添加新的属性。类别扩展的新方法优先级更高，会覆盖类中同名的方法。
+
+- 在同一个编译单元里我们的category名不能重复，否则会出现编译错误。
+
+- 类别中声明了属性后不会自动合成 getter 和 setter 方法，扩展会自动合成
+
+- 类别的作用：
+  
+  - 将类的实现分散到多个文件或者框架中
+  
+  - 创建对私有方法的前向引用
+  
+  - 向对象添加非正式协议
+
+- 类别的局限性
+  
+  - 只能向原类中添加新的方法，且只能添加不能修改或者删除原方法，不能向原类中添加新的属性。类别中不能添加新的属性是因为OC程序编译后一个类的内存布局就确定了，运行期如果修改内存布局会有问题。
+  
+  - 类别添加的新方法全局有效且优先级最高，如果和原类方法重名，原来的方法会被覆盖。
 
 ## main 函数之前做的事
 
@@ -171,9 +191,9 @@ initialize 的顺序是先父类再子类，分类会覆盖原类（由于消息
 
 ### Block 的本质
 
-- Block 本质上是一个 OC 对象，含有 isa 指针
+- Block 本质上是一个 OC 对象，含有 isa 指针。使用 `[block class]` 可以得到 `xxxBlock` 的类名。
 
-- Block 是封装了函数调用以及函数调用环境的 OC 对象
+- Block 是封装了函数调用以及函数调用环境的 OC 对象。
 
 ### block 捕获变量
 
@@ -215,8 +235,28 @@ initialize 的顺序是先父类再子类，分类会覆盖原类（由于消息
 
 - 对象类型的 auto 变量或者被 __block 修饰的 auto 变量不会被栈上的 block 强引用
 
-- 对象类型的 auto 变量如果是 __strong 的则会被堆上的 block 强引用而增加引用计数，当 block 销毁时会释放掉这个强引用；如果是 __weak 的则不会被堆上的 block 强引用
+- 对象类型的 auto 变量如果是 **strong 的则会被堆上的 block 强引用而增加引用计数，当 block 销毁时会释放掉这个强引用；如果是 weak 的则不会被堆上的 block 强引用**
 
 - 被 __block 修饰的 auto 变量会被堆上的 block 强引用，当 block 销毁时会释放掉这个强引用
 
 - ARC 下使用 strong 和 copy 修饰 block 是没有区别的，都会把 block 拷贝到堆上
+
+```objective-c
+/**
+	-[MyObject dealloc]           // obj1 没有被 block 强引用
+	block = __NSStackBlock__	  // 由于 block 使用 __weak 修饰所以是一个弱指针，得到的就是一个栈上的block，如果没有 __weak 会得到一个 MallocBlock
+	obj1 = (null)				  // 当 block 执行时 obj1 对象已经释放了
+	end	
+**/
+__weak void (^block)(void);
+{
+	MyObject *obj1 = [[MyObject alloc] init];
+	block = ^ {
+		NSLog(@"obj1 = %@", obj1);
+	};
+}
+NSLog(@"block = %@", [block class]);
+block();
+NSLog(@"end");
+```
+

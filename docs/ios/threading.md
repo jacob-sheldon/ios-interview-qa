@@ -2,6 +2,7 @@
 layout: default
 title: 多线程
 parent: iOS 相关
+nav_order: 5
 ---
 
 # 多线程
@@ -86,13 +87,26 @@ Runtime 中有一个全局数组保存了属性锁 —— 这个锁是 `spinlock
 
 ## 几个需求的实现方法
 
-- 监听多个异步操作的完成，之后统一执行某操作 —— dispatch_group 或者 dispatch_barrier
+- 监听多个异步操作的完成，之后统一执行某操作
+    - dispatch_group_async + dispatch_group_notify
 
-- 读写分离（多读单写）—— pthread_rwlock_t 或者 dispatch_barrier
+    - dispatch_barrier_async
 
-- 控制并发数量 —— dispatch_semphore(n) 或者 NSOperationQueue
+- 读写分离（多读单写）
+    - pthread_rwlock_t（读写锁）
 
-- 多个异步操作串行执行 —— dispatch_queue(Serial) 或者 dispatch_semaphore(1)
+    - dispatch_barrier_async
+
+- 控制并发数量
+    - dispatch_semphore(n)
+
+    - NSOperationQueue.maxConcurrent
+
+- 多个异步操作串行执行 
+    - dispatch_queue(Serial) 
+    - dispatch_semaphore(1)
+    - NSOperation 设置依赖
+
 
 ## 使用多线程的注意点
 
@@ -100,7 +114,7 @@ Runtime 中有一个全局数组保存了属性锁 —— 这个锁是 `spinlock
 
 - 子线程默认不会开启 runloop，也就是说线程内任务串行执行完成后该线程就停止了，需要依赖 runloop 才能进行的任务不会被执行，比如 事件、定时器、界面刷新等
 
-- `performSelector:` 方法相当于直接进行方法调用；`performSelector:afterDelay` 使用了定时器需要依赖 runloop，**哪怕 `afterDeley: 0`**。
+- `performSelector:` 方法相当于直接进行方法调用；`performSelector:afterDelay` 使用了定时器需要依赖 runloop，**哪怕 `afterDeley: 0`**，不会开新线程只是加了定时器，**selector 会在当前线程执行**。
 
 - `NSThread` 取消任务需要调用 `- (void)cancel` 方法
 

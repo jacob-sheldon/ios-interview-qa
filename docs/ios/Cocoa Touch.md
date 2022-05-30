@@ -2,6 +2,7 @@
 layout: default
 title: Cocoa Touch
 parent: iOS 相关
+nav_order: 2
 ---
 
 # Cocoa Touch
@@ -17,7 +18,7 @@ parent: iOS 相关
 - addSubview 会触发 layoutSubviews
 - 设置 view 的 frame 会触发 layoutSubviews
 - 滚动一个 UIScrollView 会触发 layoutSubviews
-- 循转屏幕会触发父 view 上的layoutSubviews。
+- 旋转屏幕会触发父 view 上的layoutSubviews。
 - 改变一个 view 的大小也会触发父 view 上的 layoutSubviews
 - 调用 setNeedLayout 和 layoutIfNeeded 会触发
 
@@ -28,12 +29,16 @@ parent: iOS 相关
 - UIView 可以响应事件，有响应链，CALayer 没有。
 - UIView 的显示属性修改不会产生隐式动画，CALayer 的属性修改会产生默认 0.25s 的隐式动画。
 
+## UIView 动画
+
+`[UIView animationWithDuration:delay:options:animations:completion]` 方法中的 animations block 会立即调用不会等待延迟 dealy 时间后再调用。并且在 animations 执行结束后这个方法才会返回。
+
 ## drawRect: 什么情况下会被触发
 
 - 调用时机：`layoutView` -> `viewDidLoad` -> `drawRect:`
 - 如果在 UIView 初始化时没有设置 rect 大小，将直接导致 drawRect: 不被自动调用
 - 通过设置 contentMode 属性值为 `UIViewContentModeRedraw`，那么将在每次设置或更改frame的时候自动调用 `drawRect:`
-- 直接调用`setNeedDisplay`，或者`setNeedsDisplayInRect:`会触发 drawRect:，条件是view 当前的 rect 不能为空。
+- 直接调用`setNeedDisplay`或者`setNeedsDisplayInRect:`会触发 drawRect:，条件是view 当前的 rect 不能为空。
 - 该方法在调用 `sizeThatFits` 后被调用，所以可以先调用 sizeToFit 计算出 size，然后系统自动调用 drawRect: 方法。
 
 [关于绘制的一篇掘金文章](https://juejin.cn/post/6844903712771555341)
@@ -96,14 +101,14 @@ iOS 系统的垂直同步是保持开启的，所以垂直同步机制是造成�
 
 根据上面的渲染原理可以得到这个问题的答案：
 
-    1. CPU 创建 view 对象并计算位置和文本宽高，之后进行文本的渲染和图片的解码（如果是图片的话）
-    2. GPU 接受 CPU 提交过来的纹理和顶点描述，应用变换、混合和渲染，然后输出到缓冲区
+1. CPU 创建 view 对象并计算位置和文本宽高，之后进行文本的渲染和图片的解码（如果是图片的话）
+2. GPU 接受 CPU 提交过来的纹理和顶点描述，应用变换、混合和渲染，然后输出到缓冲区
 
-事件传递链
+## 事件传递链
 
 RunloopSource0 -> UIKitCore 的事件队列 -> UIWindow -> UIView ... -> 最底下的能够响应的 view
 
-从UIWindow递归寻找子视图，并且对于同一层级的子视图使用倒叙遍历，分别调用每一个 view 的hittest方法。
+从UIWindow递归寻找子视图，并且对于同一层级的子视图使用倒叙遍历，分别调用每一个 view 的 `hittest` 方法。
 
 ## 一个 view 在下列情况不能响应事件：
 
@@ -114,8 +119,8 @@ RunloopSource0 -> UIKitCore 的事件队列 -> UIWindow -> UIView ... -> 最底�
 ## 事件响应链
 
 1. RunloopSource0
-2. UIKit 事件队列
-3. Application sendEvent
+2. UIKitCore 事件队列
+3. Application `sendEvent`
 4. 触发事件的 UIControl `sendAction:to:forEvent:`
 5. Application `sendAction:from:to:forEvent:`, 这里有参数target如果不为空则直接给target发送action，否则沿着响应链查询能够影响action的UIResponder。查询每个视图的方法是通过调用 `canPerformAction:withSender` 方法，如果当前 view 实现了 action 那么就返回 YES，否则继续沿着 nextResponder 找能成功响应的 responder。
 
