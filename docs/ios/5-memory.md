@@ -2,7 +2,7 @@
 layout: default
 title: 内存管理
 parent: iOS 相关
-nav_order: 4
+nav_order: 5
 ---
 
 # 内存管理
