@@ -9,7 +9,9 @@ nav_order: 1
 
 ## OC 是动态类型语言吗？OC 是强类型语言吗？为什么？
 
-OC 是编译型、动态、弱类型语言。OC要先编译成二进制文件才能执行；编译期只进行简单的类型检查，类型不匹配只会有警告可以编译通过，到了运行期只要方法能得到执行就不会 crash。OC 是 C 语言的超集，继承了 C 语言的基本类型和控制流，增加了动态运行时和面向对象。
+OC 是编译型、动态、鸭子类型语言。OC要先编译成二进制文件才能执行；编译期只进行简单的类型检查，类型不匹配只会有警告可以编译通过，到了运行期只要方法能得到执行就不会 crash。OC 是 C 语言的超集，继承了 C 语言的基本类型和控制流，增加了动态运行时和面向对象。
+
+![Why Objc is a weak type programming language](image.png)
 
 ## 把一个 B 类型对象赋值给 A 类型可以吗？为什么？
 
@@ -22,7 +24,7 @@ OC 是编译型、动态、弱类型语言。OC要先编译成二进制文件才
 ## OC 对象占用内存大小
 
 - isa 指针大小 + 实例变量大小
-- 最小是 16 字节
+- 最小是 16 字节，一个 isa 指针占用 8 字节，还需要内存对齐，所以就是最少 16 字节。
 
 ## OC 编译过程
 
@@ -61,11 +63,88 @@ OC 是编译型、动态、弱类型语言。OC要先编译成二进制文件才
 
 ## copy vs strong
 
-strong 只是增加了引用计数
+**strong 只是增加了引用计数**
 
-copy 会把对象进行复制，从而产生一个新对象，但是得到的是不可变对象
+**copy 会把对象进行复制，从而产生一个新对象，但是得到的是不可变对象**
 
 **`strong` 用来修饰可变对象，`copy`用来修饰不可变对象。**
+
+```
+如果用`copy`修饰了一个可变对象，那么这个对象实际是不可变的，和用`copy`修饰不可变对象是一样的。
+
+@property (nonatomic, copy) NSMutableArray *mArr;
+
+NSMutableArray *arr1 = [NSMutableArray array];
+self.mArr = arr1;
+    
+NSLog(@"arr1 = %p --- mArr = %p", arr1, self.mArr); // arr1 = 0x600001dce6d0 --- mArr = 0x1bbd878a8
+NSLog(@"class1 = %@", [self.mArr class]); // class1 = __NSArray0
+[self.mArr addObject:@"abc"]; // crash
+```
+
+
+```
+@property (nonatomic, strong) NSMutableArray *mArr;
+
+NSMutableArray *arr1 = [NSMutableArray array];
+self.mArr = arr1;
+    
+NSLog(@"arr1 = %p --- mArr = %p", arr1, self.mArr); // arr1 = 0x600001e61d70 --- mArr = 0x600001e61d70
+NSLog(@"class1 = %@", [self.mArr class]); // __NSArrayM
+[self.mArr addObject:@"abc"];
+
+NSArray *arr1 = [NSArray array];
+self.mArr = arr1; // warning: Incompatible pointer types assigning to 'NSMutableArray *' from 'NSArray *'
+// 使用 self.mArr = [arr1 copy] 同样有问题；使用 self.mArr = [arr1 mutableCopy] 没有问题
+    
+NSLog(@"arr1 = %p --- mArr = %p", arr1, self.mArr); // arr1 = 0x1bbd878a8 --- mArr = 0x1bbd878a8
+NSLog(@"class1 = %@", [self.mArr class]); // __NSArray0
+[self.mArr addObject:@"abc"];
+```
+
+```
+使用 strong 修饰一个不可变类型，并把一个可变数组复制给它，此时 mArr 指向的是可变数组
+
+@property (nonatomic, strong) NSArray *mArr;
+
+NSMutableArray *arr1 = [NSMutableArray array];
+self.mArr = arr1;
+
+NSLog(@"arr1 = %p --- mArr = %p", arr1, self.mArr); // arr1 = 0x6000013e5da0 --- mArr = 0x6000013e5da0
+NSLog(@"class1 = %@", [self.mArr class]); // __NSArrayM 
+[arr1 addObject:@"a"];
+NSLog(@"%@", self.mArr); // (a)
+```
+
+
+```
+mArr 是拷贝了一份 arr1 导致两者的地址不同，并且mArr是不可变的
+
+@property (nonatomic, copy) NSArray *mArr;
+
+NSMutableArray *arr1 = [NSMutableArray array];
+self.mArr = arr1;
+
+NSLog(@"arr1 = %p --- mArr = %p", arr1, self.mArr); // arr1 = 0x60000153a7c0 --- mArr = 0x1bbd878a8
+NSLog(@"class1 = %@", [self.mArr class]); // __NSArray0
+
+[arr1 addObject:@"a"];
+NSLog(@"%@", self.mArr); //
+```
+
+
+```
+这时候两个地址是相同的，虽然用的是 copy 修饰 mArr，但是因为都是不可变类型，所以没必要增加一个新的指针
+
+@property (nonatomic, copy) NSArray *mArr;
+
+NSArray *arr1 = [NSArray array];
+self.mArr = arr1;
+
+NSLog(@"arr1 = %p --- mArr = %p", arr1, self.mArr); // arr1 = 0x1bbd878a8 --- mArr = 0x1bbd878a8
+NSLog(@"class1 = %@", [self.mArr class]); // __NSArray0
+```
+
 
 ## assign vs weak
 
@@ -86,7 +165,9 @@ OC 不支持函数重载，支持函数重写。
 - isEqual 默认也是比较两个对象的地址是否相同。
 - hash 方法只在对象被添加至 `NSSet` 和设置为 `NSDictionary` 的 key 时会调用
 
-```objective-c
+```
+证明默认情况下 isEqual 和 == 是一样的
+
 NSObject *obj1 = [[NSObject alloc] init];
 NSObject *obj2 = [[NSObject alloc] init];
 NSLog(@"obj1 == obj2: %d", obj1 == obj2); // 0
@@ -99,13 +180,10 @@ NSLog(@"obj1 isEqual: obj2: %d", [obj1 isEqual:obj2]); // 0
 
 ### isEqual 和 hash 的关系
 
-经过验证我没有发现这两者有什么必然关系，虽然在 `hash` 值相等时 `isEqual`一定会调用，但是当 `hash`不等时 `isEqual` 也不一定不调用。
+为了优化判等的效率, 基于hash的NSSet和NSDictionary在判断成员是否相等时, 会这样做
 
-~~为了优化判等的效率, 基于hash的NSSet和NSDictionary在判断成员是否相等时, 会这样做~~
-
-~~Step 1: 集合成员的 hash 值是否和目标hash值相等, 如果相同进入Step 2, 如果不等, 直接判断不相等~~
-
-~~Step 2: hash值相同(即Step 1)的情况下, 再进行对象判等, 作为判等的结果~~。
+Step 1: 集合成员的 hash 值是否和目标hash值相等, 如果相同进入Step 2, 如果不等, 直接判断不相等
+Step 2: hash值相同(即Step 1)的情况下, 再进行对象判等, 作为判等的结果。
 
 ## 可变数组的实现原理
 
@@ -198,27 +276,23 @@ initialize 的顺序是先父类再子类，分类会覆盖原类（由于消息
 ### block 捕获变量
 
 | 变量类型       | 是否捕获 | 访问方式 |
-| ---------- | ---- | ---- |
-| auto局部变量   | 是    | 值传递  |
-| static局部变量 | 是    | 引用传递 |
-| 全局变量       | 否    | 直接访问 |
+| -------------- | -------- | -------- |
+| auto局部变量   | 是       | 值传递   |
+| static局部变量 | 是       | 引用传递 |
+| 全局变量       | 否       | 直接访问 |
 
 ### block 类型
 
-| block 类型      | 环境               |
-| ------------- | ---------------- |
-| NSGlobalBlock | 没有捕获auto变量       |
-| NSStackBlock  | 捕获了auto变量        |
+| block 类型    | 环境               |
+| ------------- | ------------------ |
+| NSGlobalBlock | 没有捕获auto变量   |
+| NSStackBlock  | 捕获了auto变量     |
 | NSMallocBlock | StackBlock调用copy |
 
-- 在 ARC 下会根据情况把 StackBlock 尽量优化成 MallocBlock，也就是进行 copy 
-  
+在 ARC 下会根据情况把 StackBlock 尽量优化成 MallocBlock，也就是进行 copy 
   - block 作为函数返回值
-  
   - 被强指针引用时
-  
   - block 作为 Cocoa API 中方法名含有 usingBlock 的方法参数时
-  
   - block 作为 GCD 方法的参数时
 
 ### block 中修改外部变量的值
@@ -241,22 +315,22 @@ initialize 的顺序是先父类再子类，分类会覆盖原类（由于消息
 
 - ARC 下使用 strong 和 copy 修饰 block 是没有区别的，都会把 block 拷贝到堆上
 
-```objective-c
-/**
-	-[MyObject dealloc]           // obj1 没有被 block 强引用
-	block = __NSStackBlock__	  // 由于 block 使用 __weak 修饰所以是一个弱指针，得到的就是一个栈上的block，如果没有 __weak 会得到一个 MallocBlock
-	obj1 = (null)				  // 当 block 执行时 obj1 对象已经释放了
-	end	
-**/
-__weak void (^block)(void);
+```
+__weak void (^block)(void); // 由于 block 使用 __weak 修饰所以是一个弱指针，得到的就是一个栈上的block，如果没有 __weak 会得到一个 MallocBlock
+
+// 这里面创建了一个临时 block，在这个临时 block 中捕获了 obj1 对象。并把这个临时 block 赋值给了外面的 block。
+// 这个临时 block 在出了作用域（紧跟着的下面的大括号）后，就会被销毁了。
+// 上面的 block 是一个__weak修饰的栈上的 block，不会给这个临时的 block 增加引用计数
+// 所以当出了这个大括号以后，obj1 变量就没有引用了，就会被释放掉。
 {
-	MyObject *obj1 = [[MyObject alloc] init];
-	block = ^ {
+	MyObject *obj1 = [[MyObject alloc] init]; // obj1 没有被 block 强引用
+	block = ^ { // warning: Assigning block literal to a weak variable; object will be released after assignment
 		NSLog(@"obj1 = %@", obj1);
 	};
 }
+
 NSLog(@"block = %@", [block class]);
-block();
+block(); // 当 block 执行时 obj1 对象已经释放了
 NSLog(@"end");
 ```
 
