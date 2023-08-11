@@ -12,6 +12,30 @@ nav_order: 2
 - 如果不是为了更新动画可以无脑用 `setNeedsLayout`
 - `setNeedsLayout`没有动画能力，`layoutIfNeeded`用来动画。因此，`layoutIfNeeded`需要放在动画的 block 里面来触发动画。
 
+### 通过修改约束值来执行动画
+
+```
+UIView *v1 = [[UIView alloc] init];
+v1.backgroundColor = [UIColor redColor];
+[self.view addSubview:v1];
+
+v1.translatesAutoresizingMaskIntoConstraints = NO;
+
+NSLayoutConstraint *c1 = [NSLayoutConstraint constraintWithItem:v1 attribute:NSLayoutAttributeTop relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeTop multiplier:1 constant:100];
+NSLayoutConstraint *c2 = [NSLayoutConstraint constraintWithItem:v1 attribute:NSLayoutAttributeLeading relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeLeading multiplier:1 constant:30];
+NSLayoutConstraint *c3 = [NSLayoutConstraint constraintWithItem:v1 attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeNotAnAttribute multiplier:1 constant:100];
+NSLayoutConstraint *c4 = [NSLayoutConstraint constraintWithItem:v1 attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeNotAnAttribute multiplier:1 constant:30];
+
+[self.view addConstraints:@[c1, c2, c3, c4]];
+
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    [UIView animateWithDuration:1 animations:^{
+        c1.constant = 200;
+        [self.view layoutIfNeeded];
+    }];
+});
+```
+
 ## layoutSubviews 调用时机
 
 - init 初始化不会触发 layoutSubviews
@@ -29,9 +53,45 @@ nav_order: 2
 - UIView 可以响应事件，有响应链，CALayer 没有。
 - UIView 的显示属性修改不会产生隐式动画，CALayer 的属性修改会产生默认 0.25s 的隐式动画。
 
+## CALayer 动画
+```
+CALayer *layer = [CALayer layer];
+layer.frame = CGRectMake(30, 100, 100, 60);
+layer.backgroundColor = [UIColor redColor].CGColor;
+[self.view.layer addSublayer:layer];
+    
+dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    [CATransaction setDisableActions:YES]; // 禁用隐式动画
+    [CATransaction setAnimationDuration:3]; // 设置持续时间
+    layer.position = CGPointMake(300, 100);
+});
+```
+
 ## UIView 动画
 
 `[UIView animationWithDuration:delay:options:animations:completion]` 方法中的 animations block 会立即调用不会等待延迟 dealy 时间后再调用。并且在 animations 执行结束后这个方法才会返回。
+
+```
+/**
+begin
+animation start
+end
+animation complete
+*/
+    
+UIView *v = [[UIView alloc] initWithFrame:CGRectMake(10, 100, 100, 60)];
+v.backgroundColor = [UIColor redColor];
+[self.view addSubview:v];
+    
+NSLog(@"begin");
+[UIView animateWithDuration:1 delay:3 options:UIViewAnimationOptionCurveEaseInOut animations:^{
+    NSLog(@"animation start");
+    v.frame = CGRectMake(300, 100, 100, 60);
+} completion:^(BOOL finished) {
+    NSLog(@"animation complete");
+}];
+NSLog(@"end");
+```
 
 ## drawRect: 什么情况下会被触发
 
