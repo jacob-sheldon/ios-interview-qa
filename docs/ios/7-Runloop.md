@@ -41,17 +41,38 @@ common mode 是一种特殊的 mode，注册到这个 mode 的事件会自动分
 - 实现原理：使用定时器，等待 runloop 调用
 - `afterDelay`参数设置的是最小时间，即使设置为0也不会立即执行。
 
+	```
+	- (void)viewDidLoad {
+    [super viewDidLoad];
+    /*
+     下面代码的输出顺序：
+     1
+     3
+     ViewController test
+     */
+    NSLog(@"1");
+    
+    [self performSelector:@selector(test) withObject:nil afterDelay:0];
+    
+    NSLog(@"3");
+	}
+
+  	- (void)test {
+    	NSLog(@"ViewController test");
+	}
+	```
+
 ## Runloop 自动释放池 线程
 
 一个线程对应一个runloop，一个runloop中可以有多个自动释放池
 
 ## 其他
 
-```objective-c
+```
 [self performSelector:@selector(test3) withObject:nil afterDelay:0];
 dispatch_async(dispatch_get_main_queue(), ^{
 	NSLog(@"---111");
 });
 ```
 
-会先执行 dispatch_async 中的内容，再执行 performSelector:withObject:afterDeley: 中的内容。
+会先执行 dispatch_async 中的内容，再执行 performSelector:withObject:afterDeley: 中的内容。是因为 runloop 中会先处理 GCD 再处理定时器。
