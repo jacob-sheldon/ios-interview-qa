@@ -251,7 +251,7 @@ KVO 的实现使用了 isa-swizzling 的技术。对象的 isa 指针指向的�
 
 load 是根据函数地址直接调用的，类似 C 语言的函数调用方式；
 
-initialize 是通过 OC 的消息机制（objc_msgSend) 进行调用的
+initialize 是通过 OC 的消息机制（objc_msgSend）进行调用的
 
 ### 调用时机
 
@@ -267,9 +267,12 @@ initialize 的顺序是先父类再子类，分类会覆盖原类（由于消息
 
 ## Block
 
+block 中捕获变量总是通过值传递的方式，不同之处在于传递的值不一样。全局变量不捕获，直接用。
+对于普通局部变量直接传递值本身；对于静态局部变量传递的是变量地址的值；对于 __block 修饰的局部变量，会先创建新的结构体，这个结构体中包含该变量的值，block 结构体中持有这个新结构体的引用。
+
 ### Block 的本质
 
-- Block 本质上是一个 OC 对象，含有 isa 指针。使用 `[block class]` 可以得到 `xxxBlock` 的类名。
+- Block 本质上是一个 C 的结构体，含有 isa 指针。使用 `[block class]` 可以得到 `xxxBlock` 的类名。
 
 - Block 是封装了函数调用以及函数调用环境的 OC 对象。
 
@@ -334,3 +337,59 @@ block(); // 当 block 执行时 obj1 对象已经释放了
 NSLog(@"end");
 ```
 
+### 一个例子搞懂 Block
+```
+static NSInteger num3 = 300;
+
+NSInteger num4 = 3000;
+
+- (void)blockTest
+{
+    NSInteger num = 30;
+
+    static NSInteger num2 = 3;
+
+    __block NSInteger num5 = 30000;
+
+    void(^block)(void) = ^{
+
+        NSLog(@"%zd",num);//局部变量
+
+        NSLog(@"%zd",num2);//静态变量
+
+        NSLog(@"%zd",num3);//全局变量
+
+        NSLog(@"%zd",num4);//全局静态变量
+
+        NSLog(@"%zd",num5);//__block修饰变量
+    };
+
+    block();
+}
+```
+
+编译后：
+
+```
+struct __WYTest__blockTest_block_impl_0 {
+  struct __block_impl impl;
+  struct __WYTest__blockTest_block_desc_0* Desc;
+  NSInteger num;//局部变量
+  NSInteger *num2;//静态变量
+  __Block_byref_num5_0 *num5; // by ref//__block修饰变量
+  __WYTest__blockTest_block_impl_0(void *fp, struct __WYTest__blockTest_block_desc_0 *desc, NSInteger _num, NSInteger *_num2, __Block_byref_num5_0 *_num5, int flags=0) : num(_num), num2(_num2), num5(_num5->__forwarding) {
+    impl.isa = &_NSConcreteStackBlock;
+    impl.Flags = flags;
+    impl.FuncPtr = fp;
+    Desc = desc;
+  }
+};
+
+struct __Block_byref_num5_0 {
+  void *__isa;
+__Block_byref_num5_0 *__forwarding;
+ int __flags;
+ int __size;
+ NSInteger num5;
+};
+```
