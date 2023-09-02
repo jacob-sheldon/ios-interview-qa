@@ -393,3 +393,35 @@ __Block_byref_num5_0 *__forwarding;
  NSInteger num5;
 };
 ```
+
+## 通知 Notification
+
+参考这个链接：[2020 最新iOS面试题之iOS通知机制全面解析](https://www.jianshu.com/p/5952c0a3fc62)
+
+### 怎么判断两个通知是不是同一个通知
+
+- 有name的通知，name和object相同才是同一个通知
+- 没有name的通知，object相同是同一个通知
+- name和object都没有的通知，那都是同一个通知
+
+### 通知发送
+
+- 通知都是在同一个线程发送的，只不过可以分队列发送，起到延时的效果。
+
+### NSNotificationQueue
+
+- 依赖`runloop`，所以如果在子线程使用`NSNotificationQueue`，需要开启runloop。
+- 最终还是通过`NSNotificationCenter`进行发送通知，所以这个角度讲**它还是同步的**。
+- 所以异步，指的是非实时发送而是在合适的时机进行发送，这个时机可以进行配置，并没有开启异步线程。
+
+
+### 几个常见面试题
+
+1. 实现原理（结构设计、通知如何存储的、name&observer&SEL之间的关系等）: 看上面的链接
+2. 通知的发送时同步的，还是异步的：**同步**
+3. NSNotificationCenter接受消息和发送消息是在一个线程里吗？如何异步发送消息：**是在一个线程，准确地讲没办法直接在发送消息是开启线程，但是可以把发送消息放到另一个线程。**
+4. NSNotificationQueue是异步还是同步发送？在哪个线程响应：**同步发送，在当前线程响应。**
+5. NSNotificationQueue和runloop的关系：**前者依赖后者**
+6. 如何保证通知接收的线程在主线程：**使用带有线程的接收通知的API `- (id <NSObject>)addObserverForName:(nullable NSNotificationName)name object:(nullable id)obj queue:(nullable NSOperationQueue *)queue usingBlock:(void (NS_SWIFT_SENDABLE ^)(NSNotification *note))block`**
+7. 页面销毁时不移除通知会崩溃吗：**iOS 9 之后就不会崩溃了，系统会自己移除。iOS9.0之前，会crash，原因：通知中心对观察者的引用是unsafe_unretained，导致当观察者释放的时候，观察者的指针值并不为nil，出现野指针.**
+8. 多次添加同一个通知会是什么结果？多次移除通知呢：**多次添加会重复收到，多次移除不会crash。**
