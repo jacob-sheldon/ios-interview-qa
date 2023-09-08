@@ -7,6 +7,7 @@ nav_order: 7
 
 # Runloop
 
+![Alt text](runloop-1.png)
 ## 简述 runloop
 
 Runloop 本质上就是一个 while 死循环，有了这个循环就可以确保线程永远不会结束，这个循环通过操作系统底层的函数来进行休眠和唤起，以此来节省消耗。
